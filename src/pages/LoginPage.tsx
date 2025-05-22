@@ -4,14 +4,14 @@ import { useAuth } from "../context/AuthContext";
 import { login } from "../api/auth";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { setToken } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const data = await login(email, password);
+    const data = await login(username, password);
     if (data.access_token) {
       setToken(data.access_token);
       navigate("/chat");
@@ -22,7 +22,7 @@ export default function LoginPage() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+      <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
       <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
       <button type="submit">Login</button>
     </form>
