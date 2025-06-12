@@ -19,3 +19,8 @@ npx shadcn-ui@latest add button input scroll-area
 Cài thêm icon
 
 npm install lucide-react
+
+
+npm install jwt-decode
+# với TypeScript bạn có thể cài thêm:
+npm install -D @types/jwt-decode
