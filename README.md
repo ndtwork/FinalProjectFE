@@ -4,6 +4,7 @@ frontend cho chatbot ai
 Cài Tailwind
 
 npm install -D tailwindcss postcss autoprefixer
+npm install -D @tailwindcss/postcss
 npx tailwindcss init -p
 
 Cài shadcn/ui

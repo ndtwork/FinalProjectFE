@@ -1,14 +1,7 @@
-// ---------------------- src/utils/chatSocket.ts ----------------------
+// src/utils/chatSocket.ts
 export const createSocket = (token: string, onMessage: (msg: string) => void) => {
-  const socket = new WebSocket(`ws://localhost:8000/ws/chat?token=${token}`);
-
-  socket.onopen = () => console.log("WebSocket connected");
-  socket.onmessage = (event) => {
-    const data = event.data;
-    console.log("Server:", data);
-    onMessage(data);
-  };
-  socket.onerror = (e) => console.error("WebSocket error:", e);
-
+  const WS_BASE = import.meta.env.VITE_WS_BASE_URL;
+  const socket = new WebSocket(`${WS_BASE}/ws/chat?token=${token}`);
+  socket.onmessage = (event) => onMessage(event.data);
   return socket;
 };
