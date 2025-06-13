@@ -13,7 +13,7 @@ export default function LoginPage() {
   e.preventDefault();
   try {
     await login(username, password);
-    navigate('/chat');
+    navigate('/', { replace: true });
   } catch (err: unknown) {
     // Narrow down err thành Error để lấy message
     const message =
