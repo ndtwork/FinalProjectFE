@@ -1,98 +1,201 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/AdminPage.tsx
+import React, { useEffect, useState } from "react";
 import {
+  getCollections,
+  getActiveCollection,
   createCollection,
   deleteCollection,
-  getActiveCollection,
   setActiveCollection,
   ingestFile,
-} from '../api/admin';
-import { useAuth } from '../context/AuthContext';
+} from "../api/admin";
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminPage() {
-  const { role } = useAuth();
-  const [active, setActive] = useState('');
-  const [name, setName] = useState('');
-  const [documentType, setDocumentType] = useState('Regulation');
+  const { token, role } = useAuth();
+  const [collections, setCollections] = useState<string[]>([]);
+  const [active, setActive] = useState<string>("");
+  const [newName, setNewName] = useState<string>("");
+  const [documentType, setDocumentType] = useState<string>("Regulation");
 
+  // 1. Load cả list và active collection từ BE
+  const loadAll = async () => {
+    if (!token) return;
+    try {
+      const cols = await getCollections(token);
+      setCollections(cols);
+      const { active_collection } = await getActiveCollection(token);
+      setActive(active_collection);
+    } catch (err) {
+      console.error("Load collections thất bại", err);
+    }
+  };
+
+  // 2. Chạy lần đầu (và khi token/role thay đổi)
   useEffect(() => {
-    if (role !== 'admin') return;
-    (async () => {
-      const data = await getActiveCollection();
-      setActive(data.active_collection);
-    })();
-  }, [role]);
+    if (role !== "admin") return;
+    loadAll();
+  }, [token, role]);
 
+  // 3. Tạo collection mới, rồi reload list
   const handleCreate = async () => {
-    await createCollection(name);
-    setName('');
-    const d = await getActiveCollection();
-    setActive(d.active_collection);
+    if (!token || !newName.trim()) return;
+    try {
+      await createCollection(token, newName.trim());
+      setNewName("");
+      await loadAll();
+    } catch (err) {
+      console.error("Create collection lỗi", err);
+    }
   };
 
-  const handleDelete = async () => {
-    await deleteCollection(name);
-    setName('');
-    const d = await getActiveCollection();
-    setActive(d.active_collection);
+  // 4. Xóa collection, rồi reload list
+  const handleDelete = async (name: string) => {
+    if (!token) return;
+    try {
+      await deleteCollection(token, name);
+      await loadAll();
+    } catch (err) {
+      console.error("Delete collection lỗi", err);
+    }
   };
 
+  // 5. Set active, rồi reload list
   const handleSetActive = async () => {
-    await setActiveCollection(active);
+    if (!token || !active) return;
+    try {
+      await setActiveCollection(token, active);
+      await loadAll();
+    } catch (err) {
+      console.error("Set active lỗi", err);
+    }
   };
 
-  const handleIngest = async (e: React.FormEvent) => {
+  // 6. Ingest file (không cần reload list)
+  const handleIngest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const file = (e.currentTarget as any).file.files[0] as File;
-    await ingestFile(active, documentType, file);
-    alert('Upload thành công!');
+    if (!token || !active) return;
+    const files = (e.currentTarget as any).file.files as FileList;
+    if (!files.length) return alert("Chưa chọn file");
+    try {
+      await ingestFile(token, active, documentType, files[0]);
+      alert("Upload thành công!");
+    } catch (err) {
+      console.error("Ingest lỗi", err);
+    }
   };
 
-  if (role !== 'admin') return <p className="p-4">Bạn không có quyền truy cập.</p>;
+  // Nếu không phải admin, chặn luôn
+  if (role !== "admin") {
+    return <p className="p-4">Bạn không có quyền truy cập.</p>;
+  }
 
   return (
-    <div className="p-4 max-w-lg mx-auto space-y-4">
-      <h2 className="text-2xl">Admin Dashboard</h2>
+    <div className="p-6 max-w-xl mx-auto space-y-6">
+      <h2 className="text-2xl font-bold">Admin Dashboard</h2>
+
+      {/* Danh sách collections */}
       <div>
-        <h3>Active Collection</h3>
-        <input
-          value={active}
-          onChange={e => setActive(e.target.value)}
-          className="border p-2 rounded mr-2"
-        />
-        <button onClick={handleSetActive} className="bg-blue-500 text-white p-2 rounded">
-          Set Active
-        </button>
+        <h3 className="font-semibold mb-2">Danh sách Collections</h3>
+        <ul className="border rounded p-2 space-y-1 max-h-48 overflow-auto">
+          {collections.length > 0 ? (
+            collections.map((col) => (
+              <li
+                key={col}
+                className="flex justify-between items-center hover:bg-gray-100 p-1 rounded"
+              >
+                <span
+                  className={`cursor-pointer ${
+                    col === active ? "font-semibold text-blue-600" : ""
+                  }`}
+                  onClick={() => setActive(col)}
+                >
+                  {col}
+                </span>
+                <button
+                  onClick={() => handleDelete(col)}
+                  className="text-red-500 hover:underline text-sm"
+                >
+                  Delete
+                </button>
+              </li>
+            ))
+          ) : (
+            <li>Chưa có collection nào.</li>
+          )}
+        </ul>
       </div>
+
+      {/* Chọn & Set active */}
       <div>
-        <h3>Tạo / Xóa Collection</h3>
-        <input
-          placeholder="Tên collection"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          className="border p-2 rounded mr-2"
-        />
-        <button onClick={handleCreate} className="bg-green-500 text-white p-2 rounded mr-2">
-          Create
-        </button>
-        <button onClick={handleDelete} className="bg-red-500 text-white p-2 rounded">
-          Delete
-        </button>
+        <h3 className="font-semibold mb-2">Active Collection</h3>
+        <div className="flex space-x-2">
+          <select
+            value={active}
+            onChange={(e) => setActive(e.target.value)}
+            className="flex-1 border p-2 rounded"
+          >
+            <option value="">-- Chọn collection --</option>
+            {collections.map((col) => (
+              <option key={col} value={col}>
+                {col}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleSetActive}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Set Active
+          </button>
+        </div>
       </div>
+
+      {/* Tạo collection mới */}
+      <div>
+        <h3 className="font-semibold mb-2">Tạo Collection Mới</h3>
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            placeholder="Tên collection"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="flex-1 border p-2 rounded"
+          />
+          <button
+            onClick={handleCreate}
+            className="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            Create
+          </button>
+        </div>
+      </div>
+
+      {/* Ingest file */}
       <form onSubmit={handleIngest} className="space-y-2">
-        <h3>Ingest File</h3>
-        <select
-          value={documentType}
-          onChange={e => setDocumentType(e.target.value)}
-          className="border p-2 rounded w-full"
-        >
-          <option value="Regulation">Regulation</option>
-          <option value="FAQ">FAQ</option>
-          <option value="RelatedIssue">RelatedIssue</option>
-        </select>
-        <input type="file" name="file" required className="w-full" />
-        <button type="submit" className="w-full bg-purple-500 text-white p-2 rounded">
-          Upload
-        </button>
+        <h3 className="font-semibold mb-2">Ingest Tài liệu</h3>
+        <div className="space-y-2">
+          <select
+            value={documentType}
+            onChange={(e) => setDocumentType(e.target.value)}
+            className="w-full border p-2 rounded"
+          >
+            <option value="Regulation">Regulation</option>
+            <option value="FAQ">FAQ</option>
+            <option value="RelatedIssue">RelatedIssue</option>
+          </select>
+          <input
+            type="file"
+            name="file"
+            required
+            className="w-full border p-2 rounded"
+          />
+          <button
+            type="submit"
+            className="w-full bg-purple-600 text-white px-4 py-2 rounded"
+          >
+            Upload
+          </button>
+        </div>
       </form>
     </div>
   );
