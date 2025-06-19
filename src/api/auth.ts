@@ -1,6 +1,15 @@
 // src/api/auth.ts
-import { LoginResponse, User } from "../types";
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+}
 
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+}
 const BASE = import.meta.env.VITE_API_BASE_URL;
 
 export interface LoginResponse {
