@@ -17,17 +17,20 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* Protected layout */}
-          <Route path="/" element={<PrivateLayout />}>
-            {/* Default redirect */}
+          {/* <Route path="/" element={<PrivateLayout />}> */}
+            {/* Khi đã auth và vào "/", tự động vào "/chat" */}
             <Route index element={<Navigate to="chat" replace />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="admin" element={<AdminPage />} />
-          </Route>
+          {/* </Route> */}
 
-          {/* Fallback */}
+          {/* Fallback: bất kỳ đường dẫn không khớp nào khác */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
+
     </AuthProvider>
   );
 }
+
+// TODO: remove before prod”
