@@ -1,83 +1,87 @@
 // src/api/chat.ts
+const CHAT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
-// 1. Định nghĩa các kiểu trả về của BE
 export interface Conversation {
   id: number;
-  title: string | null;
-  created_at: string;  // ISO datetime string
+  title: string;
+  created_at: string;
 }
 
-export interface ConversationMessage {
+export interface Message {
   id: number;
-  conversation_id: number;
-  timestamp: string;   // ISO datetime string
-  question: string;
-  answer: string;
-  rag_context: string;
+  sender: string;
+  text: string;
+  timestamp: string;
 }
 
-const BASE = import.meta.env.VITE_API_BASE_URL;
+function authHeader(token: string): Record<string, string> {
+  return { Authorization: `Bearer ${token}` };
+}
 
-/**
- * GET /chat/conversations
- * Trả về danh sách conversation metadata.
- */
 export async function getConversations(token: string): Promise<Conversation[]> {
-  const res = await fetch(`${BASE}/chat/conversations`, {
-    headers: { Authorization: `Bearer ${token}` },
+  const res = await fetch(`${CHAT_BASE_URL}/chat/conversations`, {
+    method: 'GET',
+    headers: authHeader(token),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(`Fetch conversations failed: ${res.status} ${res.statusText}`);
   return res.json();
 }
 
-/**
- * GET /chat/conversations/{id}/messages
- * Trả về lịch sử message cho conversation đó.
- */
 export async function getMessages(
   token: string,
   conversationId: number,
   skip = 0,
-  limit = 50
-): Promise<ConversationMessage[]> {
-  const url = `${BASE}/chat/conversations/${conversationId}/messages?skip=${skip}&value=${limit}`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(await res.text());
+  value = 50
+): Promise<Message[]> {
+  const params = new URLSearchParams({ skip: skip.toString(), value: value.toString() });
+  const res = await fetch(
+    `${CHAT_BASE_URL}/chat/conversations/${conversationId}/messages?${params.toString()}`,
+    {
+      method: 'GET',
+      headers: authHeader(token),
+    }
+  );
+  if (!res.ok) throw new Error(`Fetch messages failed: ${res.status} ${res.statusText}`);
   return res.json();
 }
 
-/**
- * DELETE /chat/conversations/{id}
- * Xóa conversation và toàn bộ history của nó.
- */
+export async function createConversation(
+  token: string,
+  title: string
+): Promise<Conversation> {
+  const res = await fetch(
+    `${CHAT_BASE_URL}/chat/conversations?title=${encodeURIComponent(title)}`,
+    {
+      method: 'POST',
+      headers: authHeader(token),
+    }
+  );
+  if (!res.ok) throw new Error(`Create conversation failed: ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
 export async function deleteConversation(
   token: string,
   conversationId: number
 ): Promise<void> {
-  const res = await fetch(`${BASE}/chat/conversations/${conversationId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
+  const res = await fetch(`${CHAT_BASE_URL}/chat/conversations/${conversationId}`, {
+    method: 'DELETE',
+    headers: authHeader(token),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(`Delete conversation failed: ${res.status} ${res.statusText}`);
 }
 
-/**
- * (Tùy chọn) GET /chat/history
- * Nếu bạn cần lấy tất cả conversation kèm messages theo batch.
- */
 export async function getHistory(
   token: string,
   skip = 0,
   limit = 20
-): Promise<{ id: number; messages: ConversationMessage[] }[]> {
+): Promise<{ id: number; messages: Message[] }[]> {
   const res = await fetch(
-    `${BASE}/chat/history?skip=${skip}&limit=${limit}`,
+    `${CHAT_BASE_URL}/chat/history?skip=${skip}&limit=${limit}`,
     {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeader(token),
     }
   );
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(`Fetch history failed: ${res.status} ${res.statusText}`);
   return res.json();
 }

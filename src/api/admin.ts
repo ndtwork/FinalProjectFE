@@ -1,86 +1,141 @@
 // src/api/admin.ts
-const BASE = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
-// GET all collections
-export const getCollections = async (token: string): Promise<string[]> => {
-  const res = await fetch(`${BASE}/admin/collections`, {
-    headers: { Authorization: `Bearer ${token}` },
+export interface Collection {
+  name: string;
+  vector_size: number;
+  distance: string;
+  created_at: string;
+  status: string;
+}
+
+export interface IngestResponse {
+  collection: string;
+  ingested: number;
+  errors: unknown[];
+}
+
+function authHeader(token: string): Record<string, string> {
+  return { Authorization: `Bearer ${token}` };
+}
+
+/**
+ * Fetch the list of collection names.
+ */
+export async function getCollections(token: string): Promise<string[]> {
+  const res = await fetch(`${BASE_URL}/admin/collections`, {
+    method: 'GET',
+    headers: authHeader(token),
   });
-  if (!res.ok) throw new Error(await res.text());
-  // JSON trả về { collections: string[] }
-  const data: { collections: string[] } = await res.json();
-  return data.collections;
-};
+  if (!res.ok) {
+    throw new Error(`Fetch collections failed: ${res.status} ${res.statusText}`);
+  }
+  const data = await res.json();
+  // API may return Collection[] or { collections: Collection[] }
+  const arr: Collection[] = Array.isArray(data)
+    ? data
+    : data.collections ?? [];
+  return arr.map(c => c.name);
+}
 
-// POST create
-export const createCollection = async (
+/**
+ * Create a new collection. vector_size and distance have sensible defaults.
+ */
+export async function createCollection(
   token: string,
   name: string,
-  vectorSize = 768,
-  distance = "COSINE"
-) => {
-  const form = new URLSearchParams({ name, vector_size: String(vectorSize), distance });
-  const res = await fetch(`${BASE}/admin/collections`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Bearer ${token}`,
-    },
+  vector_size = 768,
+  distance = 'cosine'
+): Promise<Collection> {
+  const form = new FormData();
+  form.append('name', name);
+  form.append('vector_size', vector_size.toString());
+  form.append('distance', distance);
+
+  const res = await fetch(`${BASE_URL}/admin/collections`, {
+    method: 'POST',
+    headers: authHeader(token),
     body: form,
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    throw new Error(`Create collection failed: ${res.status} ${res.statusText}`);
+  }
   return res.json();
-};
+}
 
-// DELETE collection
-export const deleteCollection = async (token: string, name: string) => {
-  const res = await fetch(`${BASE}/admin/collections/${name}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
+/**
+ * Delete the given collection.
+ */
+export async function deleteCollection(token: string, name: string): Promise<void> {
+  const res = await fetch(
+    `${BASE_URL}/admin/collections/${encodeURIComponent(name)}`,
+    {
+      method: 'DELETE',
+      headers: authHeader(token),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`Delete collection failed: ${res.status} ${res.statusText}`);
+  }
+}
 
-// GET active
-export const getActiveCollection = async (token: string): Promise<{ active_collection: string }> => {
-  const res = await fetch(`${BASE}/admin/settings/active_collection`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
-
-// PUT set active
-export const setActiveCollection = async (token: string, name: string) => {
-  const form = new URLSearchParams({ name });
-  const res = await fetch(`${BASE}/admin/settings/active_collection`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Bearer ${token}`,
-    },
-    body: form,
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
-
-// POST ingest đúng đường dẫn
-export const ingestFile = async (
+/**
+ * Ingest a file into the given collection.
+ */
+export async function ingestFile(
   token: string,
   collectionName: string,
-  documentType: string,
+  document_type: string,
   file: File
-) => {
+): Promise<IngestResponse> {
   const form = new FormData();
-  form.append("document_type", documentType);
-  form.append("file", file);
-  const res = await fetch(`${BASE}/admin/collections/${collectionName}/ingest`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+  form.append('document_type', document_type);
+  form.append('file', file);
+
+  const res = await fetch(
+    `${BASE_URL}/admin/collections/${encodeURIComponent(collectionName)}/ingest`,
+    {
+      method: 'POST',
+      headers: authHeader(token),
+      body: form,
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`Ingest file failed: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
+/**
+ * Get the name of the active collection.
+ */
+export async function getActiveCollection(token: string): Promise<string> {
+  const res = await fetch(`${BASE_URL}/admin/settings/active_collection`, {
+    method: 'GET',
+    headers: authHeader(token),
+  });
+  if (!res.ok) {
+    throw new Error(`Fetch active collection failed: ${res.status} ${res.statusText}`);
+  }
+  const data: { active_collection: string } = await res.json();
+  return data.active_collection;
+}
+
+/**
+ * Set the active collection by name.
+ */
+export async function setActiveCollection(token: string, name: string): Promise<string> {
+  const form = new FormData();
+  form.append('name', name);
+
+  const res = await fetch(`${BASE_URL}/admin/settings/active_collection`, {
+    method: 'PUT',
+    headers: authHeader(token),
     body: form,
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
+  if (!res.ok) {
+    throw new Error(`Set active collection failed: ${res.status} ${res.statusText}`);
+  }
+  const data: { active_collection: string } = await res.json();
+  return data.active_collection;
+}

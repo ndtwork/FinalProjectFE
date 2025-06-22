@@ -6,7 +6,7 @@ import {
   getMessages,
   deleteConversation,
   Conversation,
-  ConversationMessage,
+  Message,
 } from "../api/chat";
 import { createSocket } from "../utils/chatSocket";
 
@@ -26,20 +26,22 @@ export default function ChatPage() {
   // 1. Load danh sách conversations
   useEffect(() => {
     if (!token) return;
-    getConversations(token).then(setConvs).catch(console.error);
+    getConversations(token)
+      .then(setConvs)
+      .catch(console.error);
   }, [token]);
 
-  // 2. Khi chọn conversation, fetch messages + chỉ lấy question/answer
+  // 2. Khi chọn conversation, fetch messages + map sang ChatEntry
   useEffect(() => {
     if (!token || selected === null) {
       setChat([]);
       return;
     }
     getMessages(token, selected)
-      .then((msgs: ConversationMessage[]) => {
-        const entries = msgs.map((m) => ({
-          question: m.question,
-          answer: m.answer,
+      .then((msgs: Message[]) => {
+        const entries: ChatEntry[] = msgs.map((m) => ({
+          question: m.sender === "user" ? m.text : "",
+          answer: m.sender !== "user" ? m.text : "",
         }));
         setChat(entries);
       })
@@ -49,10 +51,8 @@ export default function ChatPage() {
   // 3. Mở WebSocket mỗi khi token hoặc selected thay đổi
   useEffect(() => {
     if (!token) return;
-    // Đóng socket cũ nếu có
     wsRef.current?.close();
-    // Mở socket mới
-    wsRef.current = createSocket(token, (botMsg) => {
+    wsRef.current = createSocket(token, (botMsg: string) => {
       setChat((prev) => [...prev, { question: "", answer: botMsg }]);
     });
     return () => {
@@ -68,7 +68,7 @@ export default function ChatPage() {
     setInput("");
   };
 
-  // 5. Tạo conversation mới
+  // 5. Tạo conversation mới (chỉ UI)
   const handleNew = () => {
     setSelected(null);
     setChat([]);
@@ -80,7 +80,9 @@ export default function ChatPage() {
     deleteConversation(token, id)
       .then(() => {
         setConvs((c) => c.filter((x) => x.id !== id));
-        if (selected === id) handleNew();
+        if (selected === id) {
+          handleNew();
+        }
       })
       .catch(console.error);
   };
