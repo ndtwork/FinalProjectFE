@@ -1,46 +1,42 @@
 // src/api/auth.ts
-export interface LoginResponse {
-  access_token: string;
-  token_type: string;
-}
+import { BASE_URL } from './config';
 
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
-  role: string;
+  created_at: string;
 }
-const BASE = import.meta.env.VITE_API_BASE_URL;
 
 export interface LoginResponse {
   access_token: string;
   token_type: string;
+  user: User;
 }
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: string;
-}
-
-export const login = async (username: string, password: string): Promise<LoginResponse> => {
-  const res = await fetch(`${BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
-
-export const register = async (username: string, email: string, password: string): Promise<User> => {
-  const res = await fetch(`${BASE}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+export async function register(
+  username: string,
+  email: string,
+  password: string
+): Promise<User> {
+  const res = await fetch(`${BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, email, password }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(`Register failed: ${res.status}`);
   return res.json();
-};
+}
 
+export async function login(
+  username: string,
+  password: string
+): Promise<LoginResponse> {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) throw new Error(`Login failed: ${res.status}`);
+  return res.json();
+}

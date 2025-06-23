@@ -1,16 +1,16 @@
 // src/pages/ChatPage.tsx
-import React, { useEffect, useRef, useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import React, { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import {
   getConversations,
   getMessages,
   deleteConversation,
+  createConversation,
   Conversation,
   Message,
-} from "../api/chat";
-import { createSocket } from "../utils/chatSocket";
+} from '../api/chat';
+import { createSocket } from '../utils/chatSocket';
 
-// Chỉ chứa question + answer để render
 type ChatEntry = { question: string; answer: string };
 
 export default function ChatPage() {
@@ -18,20 +18,16 @@ export default function ChatPage() {
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [chat, setChat] = useState<ChatEntry[]>([]);
-  const [input, setInput] = useState("");
-
-  // Giữ WebSocket instance ở đây
+  const [messageInput, setMessageInput] = useState<string>('');
   const wsRef = useRef<WebSocket | null>(null);
 
-  // 1. Load danh sách conversations
+  // 1. Load conversations
   useEffect(() => {
     if (!token) return;
-    getConversations(token)
-      .then(setConvs)
-      .catch(console.error);
+    getConversations(token).then(setConvs).catch(console.error);
   }, [token]);
 
-  // 2. Khi chọn conversation, fetch messages + map sang ChatEntry
+  // 2. Load messages when a conversation is selected
   useEffect(() => {
     if (!token || selected === null) {
       setChat([]);
@@ -39,80 +35,84 @@ export default function ChatPage() {
     }
     getMessages(token, selected)
       .then((msgs: Message[]) => {
-        const entries: ChatEntry[] = msgs.map((m) => ({
-          question: m.sender === "user" ? m.text : "",
-          answer: m.sender !== "user" ? m.text : "",
-        }));
-        setChat(entries);
+        setChat(
+          msgs.map((m) => ({
+            question: m.sender === 'user' ? m.text : '',
+            answer: m.sender !== 'user' ? m.text : '',
+          }))
+        );
       })
       .catch(console.error);
   }, [token, selected]);
 
-  // 3. Mở WebSocket mỗi khi token hoặc selected thay đổi
+  // 3. WebSocket setup
   useEffect(() => {
     if (!token) return;
     wsRef.current?.close();
     wsRef.current = createSocket(token, (botMsg: string) => {
-      setChat((prev) => [...prev, { question: "", answer: botMsg }]);
+      setChat((prev) => [...prev, { question: '', answer: botMsg }]);
     });
     return () => {
       wsRef.current?.close();
     };
   }, [token, selected]);
 
-  // 4. Gửi tin nhắn qua WebSocket
+  // 4. Send message
   const handleSend = () => {
-    if (!wsRef.current || !input.trim()) return;
-    wsRef.current.send(input);
-    setChat((prev) => [...prev, { question: input, answer: "" }]);
-    setInput("");
+    if (!wsRef.current || !messageInput.trim()) return;
+    wsRef.current.send(messageInput);
+    setChat((prev) => [...prev, { question: messageInput, answer: '' }]);
+    setMessageInput('');
   };
 
-  // 5. Tạo conversation mới (chỉ UI)
-  const handleNew = () => {
-    setSelected(null);
-    setChat([]);
+  // 5. Create a new conversation on the backend, then select it
+  const handleNew = async () => {
+    if (!token) return;
+    try {
+      // Here we use createConversation imported from api/chat.ts
+      const conv = await createConversation(token, `Session${convs.length + 1}`);
+      setConvs((prev) => [conv, ...prev]);
+      setSelected(conv.id);
+      setChat([]);
+    } catch (err) {
+      console.error('Tạo conversation mới thất bại', err);
+    }
   };
 
-  // 6. Xóa conversation
+  // 6. Delete conversation
   const handleDelete = (id: number) => {
     if (!token) return;
     deleteConversation(token, id)
       .then(() => {
         setConvs((c) => c.filter((x) => x.id !== id));
         if (selected === id) {
-          handleNew();
+          setSelected(null);
+          setChat([]);
         }
       })
       .catch(console.error);
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div style={{ display: 'flex', height: '100vh' }}>
       {/* Sidebar */}
-      <div style={{ width: 240, borderRight: "1px solid #ccc", padding: 16 }}>
-        <button
-          onClick={handleNew}
-          style={{ width: "100%", marginBottom: 12 }}
-        >
+      <div style={{ width: 240, borderRight: '1px solid #ccc', padding: 16 }}>
+        <button onClick={handleNew} style={{ width: '100%', marginBottom: 12 }}>
           + New Conversation
         </button>
-        <ul style={{ listStyle: "none", padding: 0 }}>
+        <ul style={{ listStyle: 'none', padding: 0 }}>
           {convs.map((c) => (
             <li key={c.id} style={{ marginBottom: 8 }}>
               <span
                 onClick={() => setSelected(c.id)}
                 style={{
-                  cursor: "pointer",
-                  fontWeight: selected === c.id ? "bold" : "normal",
+                  cursor: 'pointer',
+                  fontWeight: selected === c.id ? 'bold' : 'normal',
                 }}
               >
                 {c.title ?? `Session ${c.id}`}
               </span>
-              <button
-                onClick={() => handleDelete(c.id)}
-                style={{ marginLeft: 8 }}
-              >
+              <button onClick={() => handleDelete(c.id)} style={{ marginLeft: 8 }}>
                 🗑
               </button>
             </li>
@@ -124,48 +124,45 @@ export default function ChatPage() {
       <div
         style={{
           flex: 1,
-          display: "flex",
-          flexDirection: "column",
+          display: 'flex',
+          flexDirection: 'column',
           padding: 16,
         }}
       >
-        <h2>Chat {selected !== null ? `#${selected}` : "(new)"}</h2>
+        <h2>Chat {selected !== null ? `#${selected}` : '(new)'}</h2>
         <div
           style={{
             flex: 1,
-            border: "1px solid #ccc",
+            border: '1px solid #ccc',
             padding: 12,
-            overflowY: "auto",
+            overflowY: 'auto',
             marginBottom: 12,
           }}
         >
           {chat.map((entry, idx) => (
-            <div key={idx} style={{ margin: "8px 0" }}>
+            <div key={idx} style={{ margin: '8px 0' }}>
               {entry.question && (
-                <div style={{ textAlign: "right" }}>
+                <div style={{ textAlign: 'right' }}>
                   <strong>Bạn:</strong> {entry.question}
                 </div>
               )}
               {entry.answer && (
-                <div style={{ textAlign: "left" }}>
+                <div style={{ textAlign: 'left' }}>
                   <strong>Bot:</strong> {entry.answer}
                 </div>
               )}
             </div>
           ))}
         </div>
-        <div style={{ display: "flex" }}>
+        <div style={{ display: 'flex' }}>
           <input
             style={{ flex: 1, padding: 8 }}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            value={messageInput}
+            onChange={(e) => setMessageInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Nhập câu hỏi..."
           />
-          <button
-            onClick={handleSend}
-            style={{ marginLeft: 8, padding: "0 16px" }}
-          >
+          <button onClick={handleSend} style={{ marginLeft: 8, padding: '0 16px' }}>
             Gửi
           </button>
         </div>
