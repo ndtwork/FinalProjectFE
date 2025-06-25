@@ -14,10 +14,15 @@ export default function NavBar() {
 
   if (!token) return null;
 
-  return (
-    <nav className="bg-white shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+return (
+  <nav className="bg-white shadow-md">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex justify-between items-center h-16">
+        {/* LOGO - HUST CHATBOT */}
+        <div className="flex items-center space-x-8">
+          <span className="text-3xl font-extrabold bg-gradient-to-r from-red-600 to-black bg-clip-text text-transparent tracking-wide select-none">
+            HUST CHATBOT
+          </span>
           <div className="flex space-x-4">
             <Link
               to="/chat"
@@ -34,14 +39,16 @@ export default function NavBar() {
               </Link>
             )}
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 text-red-600 font-medium rounded-md hover:bg-red-100 transition"
-          >
-            Logout
-          </button>
         </div>
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 text-red-600 font-medium rounded-md hover:bg-red-100 transition"
+        >
+          Logout
+        </button>
       </div>
-    </nav>
-  );
+    </div>
+  </nav>
+);
+
 }

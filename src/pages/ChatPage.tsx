@@ -85,89 +85,87 @@ export default function ChatPage() {
       .catch(console.error);
   };
 
-  return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      {/* Sidebar */}
-      <div style={{ width: 240, borderRight: "1px solid #ccc", padding: 16 }}>
-        <button
-          onClick={handleNew}
-          style={{ width: "100%", marginBottom: 12 }}
-        >
-          + New Conversation
-        </button>
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {convs.map((c) => (
-            <li key={c.id} style={{ marginBottom: 8 }}>
-              <span
-                onClick={() => setSelected(c.id)}
-                style={{
-                  cursor: "pointer",
-                  fontWeight: selected === c.id ? "bold" : "normal",
-                }}
-              >
-                {c.title ?? `Session ${c.id}`}
-              </span>
-              <button
-                onClick={() => handleDelete(c.id)}
-                style={{ marginLeft: 8 }}
-              >
-                🗑
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Main chat area */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          padding: 16,
-        }}
+return (
+  <div className="flex h-screen bg-gradient-to-br from-teal-200 via-blue-200 to-blue-300">
+    {/* Sidebar */}
+    <aside className="w-64 min-w-[220px] max-w-[300px] border-r border-blue-100 bg-white/80 shadow-lg flex flex-col p-4">
+      <button
+        onClick={handleNew}
+        className="w-full py-2 mb-5 rounded-xl text-white font-semibold bg-gradient-to-r from-teal-400 to-blue-500 shadow hover:scale-105 hover:shadow-xl transition-all flex items-center justify-center gap-2"
       >
-        <h2>Chat {selected !== null ? `#${selected}` : "(new)"}</h2>
-        <div
-          style={{
-            flex: 1,
-            border: "1px solid #ccc",
-            padding: 12,
-            overflowY: "auto",
-            marginBottom: 12,
-          }}
-        >
-          {chat.map((entry, idx) => (
-            <div key={idx} style={{ margin: "8px 0" }}>
-              {entry.question && (
-                <div style={{ textAlign: "right" }}>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        Cuộc hội thoại mới
+      </button>
+      <ul className="flex-1 overflow-y-auto space-y-2">
+        {convs.map((c) => (
+          <li key={c.id} className="flex items-center group">
+            <button
+              onClick={() => setSelected(c.id)}
+              className={`flex-1 text-left px-3 py-2 rounded-lg transition-all truncate ${
+                selected === c.id
+                  ? "bg-blue-100 font-bold text-blue-700"
+                  : "hover:bg-blue-50"
+              }`}
+              title={c.title ?? `Session ${c.id}`}
+            >
+              {c.title ?? `Session ${c.id}`}
+            </button>
+            <button
+              onClick={() => handleDelete(c.id)}
+              className="ml-2 p-1 text-gray-400 hover:text-red-500 opacity-60 group-hover:opacity-100 transition"
+              title="Xóa"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </aside>
+
+    {/* Main chat area */}
+    <main className="flex-1 flex flex-col justify-between p-6">
+      <h2 className="text-xl font-bold text-blue-600 mb-2">
+        Chat {selected !== null ? `#${selected}` : "(new)"}
+      </h2>
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+        {chat.map((entry, idx) => (
+          <div key={idx} className="space-y-2">
+            {entry.question && (
+              <div className="flex justify-end">
+                <div className="max-w-[60%] bg-blue-100 text-blue-900 rounded-2xl px-4 py-2 shadow font-medium">
                   <strong>Bạn:</strong> {entry.question}
                 </div>
-              )}
-              {entry.answer && (
-                <div style={{ textAlign: "left" }}>
+              </div>
+            )}
+            {entry.answer && (
+              <div className="flex justify-start">
+                <div className="max-w-[70%] bg-teal-100 text-teal-900 rounded-2xl px-4 py-2 shadow">
                   <strong>Bot:</strong> {entry.answer}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <div style={{ display: "flex" }}>
-          <input
-            style={{ flex: 1, padding: 8 }}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Nhập câu hỏi..."
-          />
-          <button
-            onClick={handleSend}
-            style={{ marginLeft: 8, padding: "0 16px" }}
-          >
-            Gửi
-          </button>
-        </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
-    </div>
-  );
+      <div className="flex items-center gap-3">
+        <input
+          className="flex-1 text-lg rounded-xl border border-gray-200 px-5 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Nhập câu hỏi..."
+        />
+        <button
+          onClick={handleSend}
+          className="py-3 px-8 text-lg font-bold text-white rounded-2xl bg-gradient-to-r from-teal-400 to-blue-500 shadow-lg transition-all duration-150 hover:scale-105 hover:shadow-2xl"
+        >
+          Gửi
+        </button>
+      </div>
+    </main>
+  </div>
+);
+
 }

@@ -34,3 +34,11 @@ export default function App() {
 }
 
 // TODO: remove before prod”
+
+// export default function App() {
+//   return (
+//     <div className="bg-red-500 text-white text-2xl p-10 rounded-3xl shadow-2xl">
+//       Nếu bạn thấy nền đỏ và chữ trắng thì Tailwind hoạt động OK!
+//     </div>
+//   )
+// }
